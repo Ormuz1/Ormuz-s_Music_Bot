@@ -1,45 +1,59 @@
-const { joinVoiceChannel, createAudioPlayer, createAudioResource, AudioPlayerStatus} = require("@discordjs/voice");
-const { SlashCommandBuilder } = require("discord.js");
-const ytdl = require('ytdl-core');
-const ytsr = require('ytsr');
-const fs = require('fs');
+const {
+    SlashCommandBuilder,
+    ActionRowBuilder,
+    SelectMenuBuilder,
+} = require("discord.js");
+const ytsr = require("ytsr");
+const {isConnectedToGuild, createMusicQueue, addSongToQueue} = require("../music_player_manager");
+const VIDEOS_TO_RETURN = 5;
 
 module.exports = {
     data: new SlashCommandBuilder()
-        .setName('play')
-        .setDescription('Reproduce una cancion de YouTube')
-        .addStringOption(option =>
+        .setName("play")
+        .setDescription("Reproduce una cancion de YouTube")
+        .addStringOption((option) =>
             option
                 .setName("cancion")
                 .setDescription("La cancion a reproducir.")
                 .setRequired(true)
-            ),
-    async execute (interaction)
-    {
-        const ytVideo = await searchYoutubeVideo(interaction.options.getString('cancion'));
-        const resource = createAudioResource(getYoutubeVideoStream(ytVideo.url));
-        console.log(ytVideo);
-        const player = createAudioPlayer();
-        const connection = joinVoiceChannel({
-            channelId: interaction.member.voice.channel.id,
-            guildId: interaction.guild.id,
-            adapterCreator: interaction.guild.voiceAdapterCreator,
-        })
-        player.play(resource);
-        connection.subscribe(player);
-        interaction.reply("Reproduciendo: " + ytVideo.title);
+        ),
+    async execute(interaction) {
+        const searchTerm = interaction.options.getString("cancion");
+        const searchResults = await searchYoutubeVideo(
+            searchTerm,
+            VIDEOS_TO_RETURN
+        );
+        const videoSelector = new SelectMenuBuilder()
+            .setCustomId("select")
+            .setPlaceholder("Seleccione la cancion a reproducir.");
+        searchResults.forEach((video, index) => {
+            videoSelector.addOptions({
+                label: video.title,
+                value: index.toString(),
+            });
+        });
+
+        const row = new ActionRowBuilder().addComponents(videoSelector);
+        const message = await interaction.reply({ content: `Resultados de "${searchTerm}"`, components: [row], ephemeral:true });
+        const selection = await message.awaitMessageComponent()
+        const selectedVideo = searchResults[parseInt(selection.values[0])];
+        if(!isConnectedToGuild(interaction.guildId))
+        {
+            createMusicQueue(interaction.member.guild, interaction.member.voice.channel.id);
+        }
+        addSongToQueue(interaction.guildId, selectedVideo.url);
+        await selection.reply("Playing " + selectedVideo.title)
     },
 };
 
-async function sleep(ms) {
-    return new Promise(resolve => setTimeout(resolve, ms));
+/**
+ *
+ * @param {string} searchTerm The search term to query YouTube.
+ * @param {int} amountOfVideos The amount of videos to return.
+ * @returns An object containing all the information of the found videos.
+ */
+async function searchYoutubeVideo(searchTerm, amountOfVideos) {
+    const search = await ytsr(searchTerm, { limit: amountOfVideos });
+    return search.items;
 }
 
- async function searchYoutubeVideo (searchTerm) {
-    const search = await ytsr(searchTerm, {limit: 1} );
-    return search.items[0];
- }
-
-function getYoutubeVideoStream (url) {
-    return ytdl(url, {filter: 'audioonly', dlChunkSize: 0});
-}

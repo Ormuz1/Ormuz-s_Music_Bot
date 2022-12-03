@@ -49,7 +49,11 @@ addEventsToClient(client, path.join(__dirname, "events"));
 	}
  }
 
-
+/**
+ * 
+ * @param {Client} client A discord.js client.
+ * @param {string} eventsPath A path to a directory containing individual .js files with events.
+ */
  function addEventsToClient(client, eventsPath)
  {
 	const eventFiles = fs.readdirSync(eventsPath).filter(file => file.endsWith('.js'));
