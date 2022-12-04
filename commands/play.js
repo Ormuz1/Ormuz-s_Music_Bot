@@ -39,10 +39,14 @@ module.exports = {
         const selectedVideo = searchResults[parseInt(selection.values[0])];
         if(!isConnectedToGuild(interaction.guildId))
         {
-            createMusicQueue(interaction.member.guild, interaction.member.voice.channel.id);
+            createMusicQueue(interaction.member.guild, interaction.member.voice.channel.id, interaction.channelId);
+            selection.reply("Reproduciendo " + selectedVideo.url);
+        }
+        else
+        {
+            selection.reply(selectedVideo.url + " añadido a la cola de canciones");
         }
         addSongToQueue(interaction.guildId, selectedVideo.url);
-        await selection.reply("Playing " + selectedVideo.title)
     },
 };
 

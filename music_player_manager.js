@@ -6,11 +6,13 @@ const {
 } = require("@discordjs/voice");
 const Denque = require("denque");
 const ytdl = require("ytdl-core");
-musicQueues = {};
+const {sendMessageToChannel} = require("./client_manager.js")
+let musicQueues = {};
+
 module.exports = {
-    createMusicQueue(guild, channel)
+    createMusicQueue(guild, voiceChannel, textChannel)
     {
-        musicQueues[guild.id] = new MusicQueue(guild, channel);
+        musicQueues[guild.id] = new MusicQueue(guild, voiceChannel, textChannel);
     },
     addSongToQueue(guildId, songURL)
     {
@@ -27,6 +29,12 @@ module.exports = {
     getQueueFromGuild(guildId)
     {
         return musicQueues[guildId];
+    },
+    MusicQueueEvents: {
+        Play: "play",
+        Stop: "stop",
+        AddToQueue: "addToQueue",
+        Skip: "skip"
     }
 }
 
@@ -37,12 +45,14 @@ function getYoutubeAudioStream(url) {
 }
 
 class MusicQueue extends Denque {
-    constructor(guild, channel)
+    
+    constructor(guild, voiceChannel, textChannel)
     {
         super()
         this.guildId = guild.id;
+        this.textChannelId = textChannel;
         this.connection = joinVoiceChannel({
-            channelId: channel,
+            channelId: voiceChannel,
             guildId: guild.id,
             adapterCreator: guild.voiceAdapterCreator,
         });
@@ -59,6 +69,7 @@ class MusicQueue extends Denque {
             this.playNextSong();
             this.player.on(AudioPlayerStatus.Idle, () => {
                 this.shift();
+                sendMessageToChannel("Reproduciendo " + this.peekFront(), this.guildId, this.textChannelId)
                 this.playNextSong();
             })
         }
@@ -70,13 +81,13 @@ class MusicQueue extends Denque {
             this.stopPlaying();
             return;
         } 
-            
         const resource = createAudioResource(getYoutubeAudioStream(this.peekFront()));
         this.player.play(resource);
     }
 
     stopPlaying()
     {
+        sendMessageToChannel("La cola de canciones se termino.", this.guildId, this.textChannelId);
         this.connection.destroy();
         this.player.stop();
         delete this.player;
@@ -87,6 +98,8 @@ class MusicQueue extends Denque {
     skipSong()
     {
         this.shift();
+        if (typeof(this.peekFront()) !== 'undefined')
+            sendMessageToChannel("Reproduciendo " + this.peekFront(), this.guildId, this.textChannelId)
         this.playNextSong();
     }
 }
