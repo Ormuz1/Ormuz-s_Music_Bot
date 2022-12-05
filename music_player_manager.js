@@ -5,8 +5,8 @@ const {
     AudioPlayerStatus,
 } = require("@discordjs/voice");
 const Denque = require("denque");
-const ytdl = require("ytdl-core");
-const {sendMessageToChannel} = require("./client_manager.js")
+const {sendMessageToChannel} = require("./client_manager.js");
+const {getYoutubeAudioStream} = require("./youtube.js");
 let musicQueues = {};
 
 module.exports = {
@@ -16,7 +16,6 @@ module.exports = {
     },
     addSongToQueue(guildId, songURL)
     {
-        musicQueues[guildId].addSongToQueue(songURL);
     },
     skipSong(guildId)
     {
@@ -35,14 +34,22 @@ module.exports = {
         Stop: "stop",
         AddToQueue: "addToQueue",
         Skip: "skip"
+    },
+    playSong(guild, voiceChannelId, textChannelId, songUrl) {
+        if(!Object.hasOwn(musicQueues, guild.id))
+        {
+            musicQueues[guild.id] = new MusicQueue(guild, voiceChannelId, textChannelId);
+            musicQueues[guild.id].addSongToQueue(songUrl);
+            return "Reproduciendo " + songUrl;
+        }
+        else
+        {
+            musicQueues[guild.id].addSongToQueue(songUrl);
+            return songUrl + " añadido a la cola de canciones";
+        }
     }
 }
 
-
-
-function getYoutubeAudioStream(url) {
-    return ytdl(url, { filter: "audioonly", dlChunkSize: 0 });
-}
 
 class MusicQueue extends Denque {
     
