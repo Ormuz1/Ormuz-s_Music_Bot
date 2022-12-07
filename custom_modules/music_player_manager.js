@@ -7,6 +7,7 @@ const {
   createAudioPlayer,
   createAudioResource,
   AudioPlayerStatus,
+  VoiceConnectionStatus,
 } = require("@discordjs/voice");
 const Denque = require("denque");
 const { sendMessageToChannel } = require("./client_manager.js");
@@ -55,6 +56,8 @@ module.exports = {
  * A class for representing a music player.
  */
 class MusicPlayer extends Denque {
+  isBeingDestroyed = false;
+
   constructor(guild, voiceChannel, textChannel) {
     super();
     this.guildId = guild.id;
@@ -64,6 +67,11 @@ class MusicPlayer extends Denque {
       guildId: guild.id,
       adapterCreator: guild.voiceAdapterCreator,
     });
+    this.connection.on(VoiceConnectionStatus.Destroyed, () => {
+      if(!this.isBeingDestroyed) 
+        this.stopPlaying();
+    }
+    );
     this.player = createAudioPlayer();
     this.connection.subscribe(this.player);
   }
@@ -71,22 +79,23 @@ class MusicPlayer extends Denque {
   addSongToQueue(songURL) {
     const wasQueueEmpty = this.isEmpty();
     this.push(songURL);
-    if (wasQueueEmpty) {
-      this.playNextSong();
-      this.player.on(AudioPlayerStatus.Idle, () => {
-        this.shift();
-        if (typeof this.peekFront() !== "undefined")
-          sendMessageToChannel(
-            "Reproduciendo " + this.peekFront(),
-            this.guildId,
-            this.textChannelId
-          );
-        this.playNextSong();
-      });
-    }
-  }
+    if(!wasQueueEmpty)
+      return;
 
-  playNextSong() {
+    this.playNextSong();
+    this.player.on(AudioPlayerStatus.Idle, () => {
+      this.shift();
+      if (typeof this.peekFront() !== "undefined")
+        sendMessageToChannel(
+          "Reproduciendo " + this.peekFront(),
+          this.guildId,
+          this.textChannelId
+        );
+      this.playNextSong();
+    });
+     }
+
+  async playNextSong() {
     if (this.isEmpty()) {
       sendMessageToChannel(
         "La cola de canciones se termino.",
@@ -96,13 +105,15 @@ class MusicPlayer extends Denque {
       this.stopPlaying();
       return;
     }
-    const resource = createAudioResource(
-      getYoutubeAudioStream(this.peekFront())
-    );
+    const source = await getYoutubeAudioStream(this.peekFront())
+    const resource = createAudioResource(source.stream, {
+      inputType : source.type
+ });
     this.player.play(resource);
   }
 
   stopPlaying() {
+    this.isBeingDestroyed = true;
     this.connection.destroy();
     this.player.stop();
     delete this.player;
@@ -115,7 +126,7 @@ class MusicPlayer extends Denque {
     {
       this.shift();
     }
-    if (typeof this.peekFront() !== "undefined")
+    if (typeof(this.peekFront()) !== "undefined")
       sendMessageToChannel(
         "Reproduciendo " + this.peekFront(),
         this.guildId,

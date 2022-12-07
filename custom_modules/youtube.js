@@ -4,7 +4,7 @@
 const ytsr = require("ytsr");
 const ytdl = require("ytdl-core");
 const ytpl = require("ytpl");
-
+const play_dl = require("play-dl");
 module.exports = {
   /**
    *
@@ -21,8 +21,8 @@ module.exports = {
    * @param {string} url A YouTube video URL.
    * @returns {ReadableStream} The audio stream.
    */
-  getYoutubeAudioStream(url) {
-    return ytdl(url, { filter: "audioonly", dlChunkSize: 0 });
+  async getYoutubeAudioStream(url) {
+    return await play_dl.stream(url);
   },
 
   /**
