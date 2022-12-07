@@ -88,6 +88,11 @@ class MusicPlayer extends Denque {
 
   playNextSong() {
     if (this.isEmpty()) {
+      sendMessageToChannel(
+        "La cola de canciones se termino.",
+        this.guildId,
+        this.textChannelId
+      );
       this.stopPlaying();
       return;
     }
@@ -98,11 +103,6 @@ class MusicPlayer extends Denque {
   }
 
   stopPlaying() {
-    sendMessageToChannel(
-      "La cola de canciones se termino.",
-      this.guildId,
-      this.textChannelId
-    );
     this.connection.destroy();
     this.player.stop();
     delete this.player;
@@ -110,8 +110,11 @@ class MusicPlayer extends Denque {
     delete this;
   }
 
-  skipSong() {
-    this.shift();
+  skipSong(amount = 1) {
+    for (let i = 0; i < amount && !this.isEmpty(); i++)
+    {
+      this.shift();
+    }
     if (typeof this.peekFront() !== "undefined")
       sendMessageToChannel(
         "Reproduciendo " + this.peekFront(),

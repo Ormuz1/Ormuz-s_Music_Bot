@@ -22,6 +22,13 @@ module.exports = {
         .setRequired(true)
     ),
   async execute(interaction) {
+    if (!interaction.member.voice.channel)
+    {
+      await interaction.reply("ERROR: Debes estar conectado a un canal de voz"
+      + " para reproducir musica.");
+      return;
+    }
+
     const searchTerm = interaction.options.getString("cancion");
     const searchResults = await searchYoutubeVideo(
       searchTerm,

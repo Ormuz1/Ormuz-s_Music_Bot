@@ -29,6 +29,13 @@ module.exports = {
         .setRequired(true)
     ),
   async execute(interaction) {
+    if (!interaction.member.voice.channel)
+    {
+      await interaction.reply("ERROR: Debes estar conectado a un canal de voz"
+      + " para reproducir musica.");
+      return;
+    }
+
     let input = interaction.options.getString("cancion");
     const inputType = determineInputType(input);
 
@@ -45,7 +52,7 @@ module.exports = {
         break;
 
       default:
-        await interaction.reply("El parametro dado es invalido.");
+        await interaction.reply("ERROR: El parametro dado es invalido.");
         return;
     }
 
