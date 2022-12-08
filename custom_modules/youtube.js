@@ -2,7 +2,6 @@
  * A small module to handle interactions with YouTube.
  */
 const ytsr = require("ytsr");
-const ytdl = require("ytdl-core");
 const ytpl = require("ytpl");
 const play_dl = require("play-dl");
 module.exports = {
